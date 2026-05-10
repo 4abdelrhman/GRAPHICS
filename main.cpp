@@ -23,7 +23,6 @@ using namespace std;
 #include "globals.h"
 #include "algorithms.h"
 
-// ─── Global definitions ────────────────────────────────────────────────────────
 HWND             g_hwnd      = nullptr;
 HDC              g_memDC     = nullptr;
 HBITMAP          g_memBmp    = nullptr;
@@ -50,11 +49,9 @@ bool g_clipActive   = false;
 RECT g_clipRect     = {150,150,650,450};
 int  g_clipSqSide   = 150;
 
-// Bonus clip-circle
 static POINT g_clipCircCenter = {400,300};
 static int   g_clipCircR      = 180;
 
-// ─── Console log ──────────────────────────────────────────────────────────────
 void CLog(const char* fmt,...)
 {
     va_list a; va_start(a,fmt);
@@ -63,7 +60,6 @@ void CLog(const char* fmt,...)
     fflush(stdout);
 }
 
-// ─── Back buffer helpers ───────────────────────────────────────────────────────
 static void CreateBackBuffer()
 {
     HDC hdc=GetDC(g_hwnd);
@@ -84,7 +80,6 @@ static void ClearMemDC()
     FillRect(g_memDC,&r,br); DeleteObject(br);
 }
 
-// ─── RenderShape forward + implementation ─────────────────────────────────────
 void RenderShape(HDC hdc,const Shape&s)
 {
     if(s.pts.empty()) return;
@@ -92,7 +87,6 @@ void RenderShape(HDC hdc,const Shape&s)
     int x2=s.pts.size()>1?s.pts[1].x:x1;
     int y2=s.pts.size()>1?s.pts[1].y:y1;
     COLORREF c=s.color;
-
     switch(s.mode){
     // ── Lines
     case MODE_LINE_DDA:        DDALine(hdc,x1,y1,x2,y2,c); break;
@@ -108,12 +102,10 @@ void RenderShape(HDC hdc,const Shape&s)
     case MODE_ELLIPSE_DIRECT:   { int rx=abs(x2-x1),ry=abs(y2-y1); DirectEllipse(hdc,x1,y1,rx,ry,c); } break;
     case MODE_ELLIPSE_POLAR:    { int rx=abs(x2-x1),ry=abs(y2-y1); PolarEllipse(hdc,x1,y1,rx,ry,c); } break;
     case MODE_ELLIPSE_MIDPOINT: { int rx=abs(x2-x1),ry=abs(y2-y1); MidpointEllipse(hdc,x1,y1,rx,ry,c); } break;
-    // ── Curves: pts stored in shape
     case MODE_CURVE_CARDINAL:
     {
         auto cp=s.pts; CardinalSpline(hdc,cp,0.5f,c);
     } break;
-    // ── Filling  (pts[0]=center/corner, pts[1]=second)
     case MODE_FILL_CIRC_LINES:
     { int r=(int)hypot(x2-x1,y2-y1);
       FillCircleWithLines(hdc,x1,y1,r,s.pts.size()>2?(int)s.pts[2].x:1,c); } break;
@@ -136,22 +128,19 @@ void RenderShape(HDC hdc,const Shape&s)
     case MODE_FILL_FLOOD_NREC:
     { COLORREF target = GetPixel(hdc, x1, y1); if (target != c)
        FloodFillNonRec(hdc, x1, y1, c, 0, 0, g_W, g_H); } break;
-    // ── Clipping: draw clipping window, then clipped primitive
     case MODE_CLIP_RECT_POINT:
     {
         RECT cr={(LONG)s.pts[2].x,(LONG)s.pts[2].y,
                  (LONG)s.pts[3].x,(LONG)s.pts[3].y};
-        // draw clip rect
         HPEN pen=CreatePen(PS_DASH,1,RGB(0,128,0));
         HPEN op=(HPEN)SelectObject(hdc,pen);
         HBRUSH nb=(HBRUSH)GetStockObject(NULL_BRUSH);
         HBRUSH ob=(HBRUSH)SelectObject(hdc,nb);
         Rectangle(hdc,cr.left,cr.top,cr.right,cr.bottom);
         SelectObject(hdc,op); SelectObject(hdc,ob); DeleteObject(pen);
-        // draw point clipped
         if(PointInRect({x1,y1},cr))
             Ellipse(hdc,x1-3,y1-3,x1+3,y1+3);
-        else { /* outside – draw grey */
+        else {
             HPEN gp=CreatePen(PS_SOLID,1,RGB(200,200,200));
             HPEN gop=(HPEN)SelectObject(hdc,gp);
             Ellipse(hdc,x1-3,y1-3,x1+3,y1+3);
@@ -168,7 +157,6 @@ void RenderShape(HDC hdc,const Shape&s)
         HBRUSH ob=(HBRUSH)SelectObject(hdc,nb);
         Rectangle(hdc,cr.left,cr.top,cr.right,cr.bottom);
         SelectObject(hdc,op); SelectObject(hdc,ob); DeleteObject(pen);
-        // original (grey)
         HPEN gp=CreatePen(PS_DOT,1,RGB(180,180,180));
         HPEN gop=(HPEN)SelectObject(hdc,gp);
         MoveToEx(hdc,x1,y1,nullptr); LineTo(hdc,x2,y2);
@@ -187,7 +175,6 @@ void RenderShape(HDC hdc,const Shape&s)
         HBRUSH ob=(HBRUSH)SelectObject(hdc,nb);
         Rectangle(hdc,cr.left,cr.top,cr.right,cr.bottom);
         SelectObject(hdc,op); SelectObject(hdc,ob); DeleteObject(pen);
-        // poly = pts[4..]
         vector<POINT> poly(s.pts.begin()+4,s.pts.end());
         vector<POINT> out;
         SutherlandHodgman(poly,cr,out);
@@ -230,7 +217,6 @@ void RenderShape(HDC hdc,const Shape&s)
         if(CohenSutherland(cx1,cy1,cx2,cy2,cr))
             DDALine(hdc,cx1,cy1,cx2,cy2,c);
     } break;
-    // ── Bonus
     case MODE_BONUS_CIRC_POINT:
     {
         POINT cc={(LONG)s.pts[2].x,(LONG)s.pts[2].y};
@@ -261,12 +247,10 @@ void RenderShape(HDC hdc,const Shape&s)
     }
 }
 
-// ─── Redraw all shapes ─────────────────────────────────────────────────────────
 static void RedrawAll()
 {
     ClearMemDC();
     for(auto&s:g_shapes) RenderShape(g_memDC,s);
-    // Draw clipping window guide
     if(g_clipActive){
         HPEN pen=CreatePen(PS_DASH,1,RGB(100,100,255));
         HPEN op=(HPEN)SelectObject(g_memDC,pen);
@@ -275,7 +259,6 @@ static void RedrawAll()
         Rectangle(g_memDC,g_clipRect.left,g_clipRect.top,g_clipRect.right,g_clipRect.bottom);
         SelectObject(g_memDC,op); SelectObject(g_memDC,ob); DeleteObject(pen);
     }
-    // cardinal control polygon
     if(!g_cardinalPts.empty()){
         HPEN pen=CreatePen(PS_DOT,1,RGB(160,160,160));
         HPEN op=(HPEN)SelectObject(g_memDC,pen);
@@ -286,7 +269,6 @@ static void RedrawAll()
         SelectObject(g_memDC,op); DeleteObject(pen);
         for(auto&p:g_cardinalPts) Ellipse(g_memDC,p.x-3,p.y-3,p.x+3,p.y+3);
     }
-    // polygon preview
     if(!g_polyPts.empty()){
         HPEN pen=CreatePen(PS_DOT,1,RGB(160,160,160));
         HPEN op=(HPEN)SelectObject(g_memDC,pen);
@@ -300,7 +282,6 @@ static void RedrawAll()
     InvalidateRect(g_hwnd,nullptr,FALSE);
 }
 
-// ─── Color picker ──────────────────────────────────────────────────────────────
 static bool PickColor(HWND hwnd,COLORREF&c)
 {
     static COLORREF cust[16]={};
@@ -311,7 +292,6 @@ static bool PickColor(HWND hwnd,COLORREF&c)
     return false;
 }
 
-// ─── Input dialog (single integer) ────────────────────────────────────────────
 static INT_PTR CALLBACK IntDlgProc(HWND hd,UINT m,WPARAM w,LPARAM l)
 {
     static int* out=nullptr;
@@ -327,10 +307,8 @@ static INT_PTR CALLBACK IntDlgProc(HWND hd,UINT m,WPARAM w,LPARAM l)
     return FALSE;
 }
 
-// Simple quarter dialog using MessageBox buttons replacement
 static int AskQuarter(HWND hwnd)
 {
-    // We use a simple input box via console
     int q=1;
     CLog("[INPUT] Enter fill quarter (1=TR,2=TL,3=BL,4=BR): ");
     scanf_s("%d",&q);
@@ -339,7 +317,6 @@ static int AskQuarter(HWND hwnd)
     return q;
 }
 
-// ─── Save / Load ───────────────────────────────────────────────────────────────
 static void SaveShapes(const string&path)
 {
     ofstream f(path);
@@ -383,7 +360,6 @@ static string OpenFileDlg(HWND hwnd,bool save)
     return buf;
 }
 
-// ─── Update window title ───────────────────────────────────────────────────────
 static const char* ModeName(DrawMode m)
 {
     switch(m){
@@ -427,7 +403,6 @@ static void UpdateTitle()
     SetWindowTextA(g_hwnd,buf);
 }
 
-// ─── Rubber-band on screen DC ──────────────────────────────────────────────────
 static void DrawRubber(HDC hdc,POINT a,POINT b)
 {
     int r2=(int)hypot(b.x-a.x,b.y-a.y);
@@ -458,12 +433,10 @@ static void DrawRubber(HDC hdc,POINT a,POINT b)
     SetROP2(hdc,R2_COPYPEN);
 }
 
-// ─── Commit a simple 2-point shape ────────────────────────────────────────────
 static void CommitShape(POINT a,POINT b)
 {
     Shape s; s.mode=g_mode; s.color=g_drawColor;
     s.pts.push_back(a); s.pts.push_back(b);
-    // store clipping window in pts[2],pts[3] for clipping modes
     if(g_mode==MODE_CLIP_RECT_POINT||g_mode==MODE_CLIP_RECT_LINE||
        g_mode==MODE_CLIP_SQ_POINT ||g_mode==MODE_CLIP_SQ_LINE){
         s.pts.push_back({g_clipRect.left,g_clipRect.top});
@@ -481,11 +454,9 @@ static void CommitShape(POINT a,POINT b)
     CLog("[SHAPE] %s  (%d,%d)->(%d,%d)\n",ModeName(g_mode),a.x,a.y,b.x,b.y);
 }
 
-// ─── Build menu bar ────────────────────────────────────────────────────────────
 static HMENU BuildMenuBar()
 {
     HMENU hBar=CreateMenu();
-
     // File
     HMENU hF=CreatePopupMenu();
     AppendMenuA(hF,MF_STRING,ID_FILE_CLEAR,"Clear Screen");
@@ -494,21 +465,18 @@ static HMENU BuildMenuBar()
     AppendMenuA(hF,MF_SEPARATOR,0,nullptr);
     AppendMenuA(hF,MF_STRING,ID_FILE_EXIT, "Exit");
     AppendMenuA(hBar,MF_POPUP,(UINT_PTR)hF,"&File");
-
     // Preferences
     HMENU hP=CreatePopupMenu();
     AppendMenuA(hP,MF_STRING,ID_PREF_BGCOLOR,"Background Color (White)");
     AppendMenuA(hP,MF_STRING,ID_PREF_CURSOR, "Change Mouse Cursor");
     AppendMenuA(hP,MF_STRING,ID_PREF_COLOR,  "Choose Draw Color...");
     AppendMenuA(hBar,MF_POPUP,(UINT_PTR)hP,"&Preferences");
-
     // Lines
     HMENU hL=CreatePopupMenu();
     AppendMenuA(hL,MF_STRING,ID_LINE_DDA,       "DDA Line");
     AppendMenuA(hL,MF_STRING,ID_LINE_MIDPOINT,  "Midpoint Line");
     AppendMenuA(hL,MF_STRING,ID_LINE_PARAMETRIC,"Parametric Line");
     AppendMenuA(hBar,MF_POPUP,(UINT_PTR)hL,"&Lines");
-
     // Circles
     HMENU hC=CreatePopupMenu();
     AppendMenuA(hC,MF_STRING,ID_CIRCLE_DIRECT,    "Direct Circle");
@@ -517,20 +485,15 @@ static HMENU BuildMenuBar()
     AppendMenuA(hC,MF_STRING,ID_CIRCLE_MIDPOINT,  "Midpoint Circle");
     AppendMenuA(hC,MF_STRING,ID_CIRCLE_MOD_MID,   "Modified Midpoint Circle");
     AppendMenuA(hBar,MF_POPUP,(UINT_PTR)hC,"&Circles");
-
     // Ellipse
     HMENU hE=CreatePopupMenu();
     AppendMenuA(hE,MF_STRING,ID_ELLIPSE_DIRECT,  "Direct Ellipse");
     AppendMenuA(hE,MF_STRING,ID_ELLIPSE_POLAR,   "Polar Ellipse");
     AppendMenuA(hE,MF_STRING,ID_ELLIPSE_MIDPOINT,"Midpoint Ellipse");
     AppendMenuA(hBar,MF_POPUP,(UINT_PTR)hE,"&Ellipse");
-
-    // Curves
     HMENU hCv=CreatePopupMenu();
     AppendMenuA(hCv,MF_STRING,ID_CURVE_CARDINAL,"Cardinal Spline");
     AppendMenuA(hBar,MF_POPUP,(UINT_PTR)hCv,"C&urves");
-
-    // Filling
     HMENU hFi=CreatePopupMenu();
     AppendMenuA(hFi,MF_STRING,ID_FILL_CIRC_LINES, "Fill Circle w/ Lines");
     AppendMenuA(hFi,MF_STRING,ID_FILL_CIRC_CIRCS, "Fill Circle w/ Circles");
@@ -543,8 +506,6 @@ static HMENU BuildMenuBar()
     AppendMenuA(hFi,MF_STRING,ID_FILL_FLOOD_REC, "Recursive Flood Fill");
     AppendMenuA(hFi,MF_STRING,ID_FILL_FLOOD_NREC,"Non-Recursive Flood Fill");
     AppendMenuA(hBar,MF_POPUP,(UINT_PTR)hFi,"F&illing");
-
-    // Clipping
     HMENU hCl=CreatePopupMenu();
     HMENU hClR=CreatePopupMenu();
     AppendMenuA(hClR,MF_STRING,ID_CLIP_RECT_POINT,"Point");
@@ -556,8 +517,6 @@ static HMENU BuildMenuBar()
     AppendMenuA(hClS,MF_STRING,ID_CLIP_SQ_LINE, "Line");
     AppendMenuA(hCl,MF_POPUP,(UINT_PTR)hClS,"Square Window");
     AppendMenuA(hBar,MF_POPUP,(UINT_PTR)hCl,"C&lipping");
-
-    // Bonus
     HMENU hBo=CreatePopupMenu();
     HMENU hBoC=CreatePopupMenu();
     AppendMenuA(hBoC,MF_STRING,ID_BONUS_CIRC_POINT,"Point");
@@ -567,11 +526,9 @@ static HMENU BuildMenuBar()
     AppendMenuA(hBo,MF_STRING,ID_BONUS_HAPPY,"Happy Face");
     AppendMenuA(hBo,MF_STRING,ID_BONUS_SAD,  "Sad Face");
     AppendMenuA(hBar,MF_POPUP,(UINT_PTR)hBo,"&Bonus");
-
     return hBar;
 }
 
-// ─── Cursor cycling ────────────────────────────────────────────────────────────
 static int g_cursorIdx=0;
 LPCSTR IDC_PENCIL;
 static LPCSTR g_cursors[]={IDC_CROSS,IDC_ARROW,IDC_HAND,IDC_PENCIL};
@@ -582,8 +539,6 @@ static void CycleCursor()
     SetClassLongPtrA(g_hwnd,GCLP_HCURSOR,(LONG_PTR)LoadCursorA(nullptr,g_cursors[g_cursorIdx]));
     CLog("[PREF] Cursor changed to: %s\n",g_cursorNames[g_cursorIdx]);
 }
-
-// ─── WndProc ───────────────────────────────────────────────────────────────────
 LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
 {
     switch(msg)
@@ -593,7 +548,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
         CreateBackBuffer();
         RedrawAll();
         return 0;
-
     case WM_PAINT:
     {
         PAINTSTRUCT ps; HDC hdc=BeginPaint(hwnd,&ps);
@@ -601,16 +555,22 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
         EndPaint(hwnd,&ps);
         return 0;
     }
-
-    // ── MOUSE DOWN ────────────────────────────────────────────
     case WM_LBUTTONDOWN:
     {
         int mx = GET_X_LPARAM(lp), my = GET_Y_LPARAM(lp);
-        // ── Multi-point modes ─────────────────────────────────────
         if (g_mode == MODE_CURVE_CARDINAL) {
             g_cardinalPts.push_back({mx, my});
             CLog("[CARDINAL] Added pt (%d,%d)  total=%zu\n", mx, my, g_cardinalPts.size());
             RedrawAll();
+            if (g_cardinalPts.size() == 4) {
+                Shape s; s.mode=g_mode; s.color=g_drawColor;
+                s.pts = g_cardinalPts;
+                g_shapes.push_back(s);
+                RenderShape(g_memDC, g_shapes.back());
+                CLog("[CARDINAL] Auto-committed 4 pts\n");
+                g_cardinalPts.clear();
+                InvalidateRect(hwnd, nullptr, FALSE);
+            }
             return 0;
         }
         if (g_mode == MODE_FILL_CONVEX   ||
@@ -621,12 +581,10 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
             RedrawAll();
             return 0;
         }
-        // ── Flood fill: single click, no two-click needed ─────────
         if (g_mode == MODE_FILL_FLOOD_REC || g_mode == MODE_FILL_FLOOD_NREC) {
             CommitShape({mx,my},{mx,my});
             return 0;
         }
-        // ── Two-click modes (lines + circles + ellipses + fills) ──
         bool isTwoClickMode = (g_mode == MODE_LINE_DDA          ||
                             g_mode == MODE_LINE_MIDPOINT      ||
                             g_mode == MODE_LINE_PARAMETRIC    ||
@@ -657,7 +615,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
             }
             return 0;
         }
-        // ── Everything else: drag ─────────────────────────────────
         g_ptStart = {mx, my};
         g_ptPrev  = g_ptStart;
         g_lbDown  = true;
@@ -665,21 +622,17 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
         CLog("[MOUSE] Down (%d,%d)  mode=%s\n", mx, my, ModeName(g_mode));
         return 0;
     }
-    // ── MOUSE MOVE ────────────────────────────────────────────
     case WM_MOUSEMOVE:
     {
         if(!g_lbDown) return 0;
         int mx=GET_X_LPARAM(lp), my=GET_Y_LPARAM(lp);
         HDC hdc=GetDC(hwnd);
-        // erase old rubber
         DrawRubber(hdc,g_ptStart,g_ptPrev);
-        // draw new rubber
         DrawRubber(hdc,g_ptStart,{mx,my});
         ReleaseDC(hwnd,hdc);
         g_ptPrev={mx,my};
         return 0;
     }
-    // ── MOUSE UP ──────────────────────────────────────────────
     case WM_LBUTTONUP:
     {
         if(!g_lbDown) return 0;
@@ -694,18 +647,16 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
         CommitShape(g_ptStart,end);
         return 0;
     }
-
-    // ── RIGHT CLICK = finish multi-point shapes ───────────────
     case WM_RBUTTONDOWN:
     {
-        if(g_mode==MODE_CURVE_CARDINAL && g_cardinalPts.size()>=2){
+        if (g_mode == MODE_CURVE_CARDINAL && g_cardinalPts.size() == 4) {
             Shape s; s.mode=g_mode; s.color=g_drawColor;
-            s.pts=g_cardinalPts;
+            s.pts = g_cardinalPts;
             g_shapes.push_back(s);
-            RenderShape(g_memDC,g_shapes.back());
-            CLog("[CARDINAL] Committed %zu pts\n",g_cardinalPts.size());
+            RenderShape(g_memDC, g_shapes.back());
+            CLog("[CARDINAL] Committed 4 pts\n");
             g_cardinalPts.clear();
-            InvalidateRect(hwnd,nullptr,FALSE);
+            InvalidateRect(hwnd, nullptr, FALSE);
         }
         else if((g_mode==MODE_FILL_CONVEX||g_mode==MODE_FILL_NONCONVEX) && g_polyPts.size()>=3){
             Shape s; s.mode=g_mode; s.color=g_drawColor;
@@ -718,7 +669,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
         }
         else if(g_mode==MODE_CLIP_RECT_POLY && g_polyPts.size()>=3){
             Shape s; s.mode=g_mode; s.color=g_drawColor;
-            s.pts.push_back({0,0}); s.pts.push_back({0,0}); // dummy p1,p2
+            s.pts.push_back({0,0}); s.pts.push_back({0,0});
             s.pts.push_back({g_clipRect.left,g_clipRect.top});
             s.pts.push_back({g_clipRect.right,g_clipRect.bottom});
             for(auto&p:g_polyPts) s.pts.push_back(p);
@@ -732,12 +683,9 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
         }
         return 0;
     }
-
-    // ── COMMANDS ──────────────────────────────────────────────
     case WM_COMMAND:
     {
         int id=LOWORD(wp);
-        // File
         if(id==ID_FILE_CLEAR){
             g_shapes.clear(); g_cardinalPts.clear(); g_polyPts.clear();
             ClearMemDC(); InvalidateRect(hwnd,nullptr,FALSE);
@@ -752,7 +700,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
             if(!p.empty()) LoadShapes(p);
         }
         else if(id==ID_FILE_EXIT) PostQuitMessage(0);
-        // Preferences
         else if(id==ID_PREF_BGCOLOR){
             g_bgColor=RGB(255,255,255);
             CLog("[PREF] Background set to White\n");
@@ -764,31 +711,25 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
                 CLog("[PREF] Draw color changed to #%06X\n",
                     GetRValue(g_drawColor)<<16|GetGValue(g_drawColor)<<8|GetBValue(g_drawColor));
         }
-
         // Lines
         else if(id==ID_LINE_DDA)        { g_mode=MODE_LINE_DDA;        g_waitingSecondPt=false; CLog("[MODE] DDA Line\n"); }
         else if(id==ID_LINE_MIDPOINT)   { g_mode=MODE_LINE_MIDPOINT;   g_waitingSecondPt=false; CLog("[MODE] Midpoint Line\n"); }
         else if(id==ID_LINE_PARAMETRIC) { g_mode=MODE_LINE_PARAMETRIC; g_waitingSecondPt=false; CLog("[MODE] Parametric Line\n"); }
-
         // Circles
         else if(id==ID_CIRCLE_DIRECT)    { g_mode=MODE_CIRCLE_DIRECT;     g_waitingSecondPt=false; }
         else if(id==ID_CIRCLE_POLAR)     { g_mode=MODE_CIRCLE_POLAR;      g_waitingSecondPt=false; }
         else if(id==ID_CIRCLE_ITER_POLAR){ g_mode=MODE_CIRCLE_ITER_POLAR; g_waitingSecondPt=false; }
         else if(id==ID_CIRCLE_MIDPOINT)  { g_mode=MODE_CIRCLE_MIDPOINT;   g_waitingSecondPt=false; }
         else if(id==ID_CIRCLE_MOD_MID)   { g_mode=MODE_CIRCLE_MOD_MID;    g_waitingSecondPt=false; }
-
-
         // Ellipse
         else if(id==ID_ELLIPSE_DIRECT)   { g_mode=MODE_ELLIPSE_DIRECT;    g_waitingSecondPt=false; }
         else if(id==ID_ELLIPSE_POLAR)    { g_mode=MODE_ELLIPSE_POLAR;     g_waitingSecondPt=false; }
         else if(id==ID_ELLIPSE_MIDPOINT) { g_mode=MODE_ELLIPSE_MIDPOINT;  g_waitingSecondPt=false; }
-
         // Curves
         else if(id==ID_CURVE_CARDINAL){
             g_mode=MODE_CURVE_CARDINAL; g_cardinalPts.clear();
             CLog("[MODE] Cardinal Spline – left-click to add pts, right-click to finish\n");
         }
-
         // Filling
         else if(id==ID_FILL_CIRC_LINES) { g_fillQuarter=1; g_mode=MODE_FILL_CIRC_LINES; g_waitingSecondPt=false; CLog("[MODE] Fill Circle w/ Lines\n"); }
         else if(id==ID_FILL_CIRC_CIRCS) { g_fillQuarter=1; g_mode=MODE_FILL_CIRC_CIRCS; g_waitingSecondPt=false; CLog("[MODE] Fill Circle w/ Circles\n"); }
@@ -798,7 +739,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
         else if(id==ID_FILL_NONCONVEX)  { g_mode=MODE_FILL_NONCONVEX;g_polyPts.clear(); CLog("[MODE] Non-Convex Fill – click pts, RClick done\n"); }
         else if(id==ID_FILL_FLOOD_REC)  { g_mode=MODE_FILL_FLOOD_REC;  CLog("[MODE] Recursive Flood Fill – click inside a closed shape\n"); }
         else if(id==ID_FILL_FLOOD_NREC) { g_mode=MODE_FILL_FLOOD_NREC; CLog("[MODE] Non-Recursive Flood Fill – click inside a closed shape\n"); }
-
         // Clipping
         else if(id==ID_CLIP_RECT_POINT){ g_mode=MODE_CLIP_RECT_POINT; CLog("[MODE] Rect Clip-Point. Clip window: (%d,%d)-(%d,%d)\n",g_clipRect.left,g_clipRect.top,g_clipRect.right,g_clipRect.bottom); }
         else if(id==ID_CLIP_RECT_LINE) { g_mode=MODE_CLIP_RECT_LINE;  CLog("[MODE] Rect Clip-Line. Draw a line with mouse.\n"); }
@@ -822,19 +762,15 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
         else if(id==ID_BONUS_CIRC_LINE) { g_mode=MODE_BONUS_CIRC_LINE;  CLog("[MODE] Circle Clip-Line\n"); }
         else if(id==ID_BONUS_HAPPY)     { g_mode=MODE_BONUS_HAPPY; CLog("[MODE] Happy Face – drag center+radius\n"); }
         else if(id==ID_BONUS_SAD)       { g_mode=MODE_BONUS_SAD;   CLog("[MODE] Sad Face – drag center+radius\n"); }
-
         UpdateTitle();
         return 0;
     }
-
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
     }
     return DefWindowProcA(hwnd,msg,wp,lp);
 }
-
-// ─── Console input thread ──────────────────────────────────────────────────────
 DWORD WINAPI ConsoleThread(LPVOID)
 {
     CLog("\n=================================================\n");
@@ -896,18 +832,14 @@ DWORD WINAPI ConsoleThread(LPVOID)
     return 0;
 }
 
-// ─── WinMain ───────────────────────────────────────────────────────────────────
 int WINAPI WinMain(HINSTANCE hInst,HINSTANCE,LPSTR,int nCmdShow)
 {
-    // Open console
     AllocConsole();
     FILE* dummy;
     freopen_s(&dummy,"CONOUT$","w",stdout);
     freopen_s(&dummy,"CONOUT$","w",stderr);
     freopen_s(&dummy,"CONIN$", "r",stdin);
     SetConsoleTitleA("2D Drawing Package – Console");
-
-    // Register window class
     WNDCLASSEXA wc={};
     wc.cbSize=sizeof(wc);
     wc.style=CS_HREDRAW|CS_VREDRAW;
@@ -917,21 +849,16 @@ int WINAPI WinMain(HINSTANCE hInst,HINSTANCE,LPSTR,int nCmdShow)
     wc.hbrBackground=(HBRUSH)GetStockObject(WHITE_BRUSH);
     wc.lpszClassName="Draw2D";
     RegisterClassExA(&wc);
-
     g_hwnd=CreateWindowExA(0,"Draw2D","2D Drawing Package",
         WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,1000,680,
         nullptr,nullptr,hInst,nullptr);
-
     SetMenu(g_hwnd,BuildMenuBar());
     CreateBackBuffer();
     ShowWindow(g_hwnd,nCmdShow);
     UpdateWindow(g_hwnd);
     UpdateTitle();
-
     CLog("[APP] Ready. Select a tool from the menu, then draw with the mouse.\n");
-
     HANDLE hThread=CreateThread(nullptr,0,ConsoleThread,nullptr,0,nullptr);
-
     MSG msg;
     while(GetMessageA(&msg,nullptr,0,0)){
         TranslateMessage(&msg);

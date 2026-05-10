@@ -2,19 +2,12 @@
 #include "globals.h"
 #include <algorithm>
 using namespace std;
-// ═══════════════════════════════════════════════════════════════════════════
-//  LOW-LEVEL PIXEL
-// ═══════════════════════════════════════════════════════════════════════════
 inline void PutPixel(HDC hdc, int x, int y, COLORREF c)
 {
     SetPixel(hdc, x, y, c);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  LINES
-// ═══════════════════════════════════════════════════════════════════════════
-
-// ── DDA ──────────────────────────────────────────────────────────────────────
+// DDA
 void DDALine(HDC hdc, int x1, int y1, int x2, int y2, COLORREF c)
 {
     int dx = x2 - x1, dy = y2 - y1;
@@ -29,7 +22,7 @@ void DDALine(HDC hdc, int x1, int y1, int x2, int y2, COLORREF c)
     }
 }
 
-// ── Midpoint (Bresenham) ──────────────────────────────────────────────────────
+// Midpoint (Bresenham)
 void MidpointLine(HDC hdc, int x1, int y1, int x2, int y2, COLORREF c)
 {
     int dx = abs(x2-x1), dy = abs(y2-y1);
@@ -44,7 +37,7 @@ void MidpointLine(HDC hdc, int x1, int y1, int x2, int y2, COLORREF c)
     }
 }
 
-// ── Parametric ────────────────────────────────────────────────────────────────
+// Parametric 
 void ParametricLine(HDC hdc, int x1, int y1, int x2, int y2, COLORREF c)
 {
     int steps = max(abs(x2-x1), abs(y2-y1));
@@ -57,9 +50,7 @@ void ParametricLine(HDC hdc, int x1, int y1, int x2, int y2, COLORREF c)
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  CIRCLES
-// ═══════════════════════════════════════════════════════════════════════════
+
 static void Plot8(HDC hdc, int cx, int cy, int x, int y, COLORREF c)
 {
     PutPixel(hdc,cx+x,cy+y,c); PutPixel(hdc,cx-x,cy+y,c);
@@ -68,7 +59,7 @@ static void Plot8(HDC hdc, int cx, int cy, int x, int y, COLORREF c)
     PutPixel(hdc,cx+y,cy-x,c); PutPixel(hdc,cx-y,cy-x,c);
 }
 
-// ── Direct (equation) ────────────────────────────────────────────────────────
+// Direct (equation)
 void DirectCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
 {
     for (int x = 0; x <= (int)(r/sqrt(2.0))+1; ++x) {
@@ -77,7 +68,7 @@ void DirectCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
     }
 }
 
-// ── Polar ─────────────────────────────────────────────────────────────────────
+// Polar
 void PolarCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
 {
     float step = 1.0f / r;
@@ -88,7 +79,7 @@ void PolarCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
     }
 }
 
-// ── Iterative Polar ───────────────────────────────────────────────────────────
+// Iterative Polar
 void IterativePolarCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
 {
     float eps = 1.0f / r;
@@ -100,7 +91,7 @@ void IterativePolarCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
     }
 }
 
-// ── Midpoint ──────────────────────────────────────────────────────────────────
+// Midpoint
 void MidpointCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
 {
     int x=0, y=r, d=1-r;
@@ -113,7 +104,7 @@ void MidpointCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
     }
 }
 
-// ── Modified Midpoint ─────────────────────────────────────────────────────────
+// Modified Midpoint
 void ModifiedMidpointCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
 {
     int x=0, y=r;
@@ -128,16 +119,14 @@ void ModifiedMidpointCircle(HDC hdc, int cx, int cy, int r, COLORREF c)
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 //  ELLIPSE
-// ═══════════════════════════════════════════════════════════════════════════
 static void Plot4E(HDC hdc, int cx, int cy, int x, int y, COLORREF c)
 {
     PutPixel(hdc,cx+x,cy+y,c); PutPixel(hdc,cx-x,cy+y,c);
     PutPixel(hdc,cx+x,cy-y,c); PutPixel(hdc,cx-x,cy-y,c);
 }
 
-// ── Direct ────────────────────────────────────────────────────────────────────
+// Direct 
 void DirectEllipse(HDC hdc, int cx, int cy, int rx, int ry, COLORREF c)
 {
     for (int x = -rx; x <= rx; ++x) {
@@ -147,7 +136,7 @@ void DirectEllipse(HDC hdc, int cx, int cy, int rx, int ry, COLORREF c)
     }
 }
 
-// ── Polar ─────────────────────────────────────────────────────────────────────
+// Polar
 void PolarEllipse(HDC hdc, int cx, int cy, int rx, int ry, COLORREF c)
 {
     int steps = max(rx,ry)*4;
@@ -159,15 +148,13 @@ void PolarEllipse(HDC hdc, int cx, int cy, int rx, int ry, COLORREF c)
     }
 }
 
-// ── Midpoint ──────────────────────────────────────────────────────────────────
+// Midpoint
 void MidpointEllipse(HDC hdc, int cx, int cy, int rx, int ry, COLORREF c)
 {
     long long rx2 = (long long)rx*rx, ry2 = (long long)ry*ry;
     int x=0, y=ry;
     long long px=0, py=2*rx2*y;
     Plot4E(hdc,cx,cy,x,y,c);
-
-    // Region 1
     long long p1 = (long long)(ry2 - rx2*ry + 0.25*rx2);
     while (px < py) {
         ++x; px += 2*ry2;
@@ -175,7 +162,6 @@ void MidpointEllipse(HDC hdc, int cx, int cy, int rx, int ry, COLORREF c)
         else { --y; py -= 2*rx2; p1 += ry2 + px - py; }
         Plot4E(hdc,cx,cy,x,y,c);
     }
-    // Region 2
     long long p2 = (long long)(ry2*(x+0.5)*(x+0.5) + rx2*(y-1)*(y-1) - rx2*ry2);
     while (y > 0) {
         --y;
@@ -185,9 +171,7 @@ void MidpointEllipse(HDC hdc, int cx, int cy, int rx, int ry, COLORREF c)
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 //  CARDINAL SPLINE
-// ═══════════════════════════════════════════════════════════════════════════
 void CardinalSpline(HDC hdc, const vector<POINT>& pts, float tension, COLORREF c)
 {
     if (pts.size() < 2) return;
@@ -214,9 +198,7 @@ void CardinalSpline(HDC hdc, const vector<POINT>& pts, float tension, COLORREF c
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 //  HERMITE CURVE  (for fill use)
-// ═══════════════════════════════════════════════════════════════════════════
 static POINT HermitePoint(POINT p1,POINT p4,POINT r1,POINT r4,float t)
 {
     float t2=t*t,t3=t2*t;
@@ -227,7 +209,7 @@ static POINT HermitePoint(POINT p1,POINT p4,POINT r1,POINT r4,float t)
     return p;
 }
 
-// ── Bezier (De Casteljau, for fill) ──────────────────────────────────────────
+// Bezier (De Casteljau, for fill)
 static POINT BezierPoint(POINT p0,POINT p1,POINT p2,POINT p3,float t)
 {
     float u=1-t;
@@ -236,9 +218,7 @@ static POINT BezierPoint(POINT p0,POINT p1,POINT p2,POINT p3,float t)
     return {(int)round(x),(int)round(y)};
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 //  FILLING
-// ═══════════════════════════════════════════════════════════════════════════
 
 // helper: quarter mask  (1=TR,2=TL,3=BL,4=BR)
 static bool InQuarter(int dx, int dy, int q)
@@ -252,7 +232,7 @@ static bool InQuarter(int dx, int dy, int q)
     return true;
 }
 
-// ── Fill circle with lines ────────────────────────────────────────────────────
+// Fill circle with lines
 void FillCircleWithLines(HDC hdc, int cx, int cy, int r, int quarter, COLORREF c)
 {
     for (int y=-r; y<=r; ++y) {
@@ -263,16 +243,14 @@ void FillCircleWithLines(HDC hdc, int cx, int cy, int r, int quarter, COLORREF c
                 PutPixel(hdc,cx+xx,cy+y,c);
         }
     }
-    // outline
     MidpointCircle(hdc,cx,cy,r,c);
 }
 
-// ── Fill circle with circles ──────────────────────────────────────────────────
+// Fill circle with circles
 void FillCircleWithCircles(HDC hdc, int cx, int cy, int r, int quarter, COLORREF c)
 {
     MidpointCircle(hdc,cx,cy,r,c);
     for (int ri=r-1; ri>0; ri-=3) {
-        // draw only the quarter portion
         float step = 1.0f/ri;
         for (float t=0; t<(float)(2*M_PI); t+=step) {
             int dx=(int)round(ri*cos(t));
@@ -283,16 +261,14 @@ void FillCircleWithCircles(HDC hdc, int cx, int cy, int r, int quarter, COLORREF
     }
 }
 
-// ── Fill square with Hermite curves (vertical) ────────────────────────────────
+// Fill square with Hermite curves (vertical)
 void FillSquareWithHermite(HDC hdc, int x1, int y1, int side, COLORREF c)
 {
     int x2=x1+side, y2=y1+side;
-    // draw border
     DDALine(hdc,x1,y1,x2,y1,c);
     DDALine(hdc,x2,y1,x2,y2,c);
     DDALine(hdc,x2,y2,x1,y2,c);
     DDALine(hdc,x1,y2,x1,y1,c);
-    // fill with vertical hermite curves every few pixels
     for (int x=x1; x<=x2; x+=4) {
         POINT p1={x,y1},p4={x,y2};
         POINT r1={side/2,0},r4={-side/2,0};
@@ -306,7 +282,7 @@ void FillSquareWithHermite(HDC hdc, int x1, int y1, int side, COLORREF c)
     }
 }
 
-// ── Fill rectangle with Bezier curves (horizontal) ────────────────────────────
+// Fill rectangle with Bezier curves (horizontal)
 void FillRectWithBezier(HDC hdc, int x1, int y1, int w, int h, COLORREF c)
 {
     int x2=x1+w, y2=y1+h;
@@ -326,7 +302,7 @@ void FillRectWithBezier(HDC hdc, int x1, int y1, int w, int h, COLORREF c)
 }
 
 
-// ── Scan-line convex fill ─────────────────────────────────────────────────────
+//  Scan-line convex fill 
 void ScanlineFill(HDC hdc, vector<POINT> poly, COLORREF c)
 {
     if (poly.size()<3) return;
@@ -349,13 +325,13 @@ void ScanlineFill(HDC hdc, vector<POINT> poly, COLORREF c)
     }
 }
 
-// ── Non-convex (same scan-line, handles concavities too) ─────────────────────
+//  Non-convex (same scan-line, handles concavities too) 
 void NonConvexFill(HDC hdc,vector<POINT>& poly, COLORREF c)
 {
     ScanlineFill(hdc, poly, c); // scan-line is inherently general
 }
 
-// ── Recursive flood fill ──────────────────────────────────────────────────────
+//  Recursive flood fill 
 void FloodFillRec(HDC hdc, int x, int y, COLORREF fill, COLORREF target,
                   int x0, int y0, int x1, int y1, int depth=0)
 {
@@ -369,13 +345,12 @@ void FloodFillRec(HDC hdc, int x, int y, COLORREF fill, COLORREF target,
     FloodFillRec(hdc,x,y-1,fill,target,x0,y0,x1,y1,depth+1);
 }
 
-// ── Non-recursive (stack-based) flood fill ────────────────────────────────────
+//  Non-recursive (stack-based) flood fill 
 void FloodFillNonRec(HDC hdc, int sx, int sy, COLORREF fill,
                      int x0, int y0, int x1, int y1)
 {
     COLORREF target = GetPixel(hdc, sx, sy);
     if (target == fill) return;
-
     std::stack<POINT> stk;
     stk.push({sx, sy});
     while (!stk.empty()){
@@ -391,17 +366,15 @@ void FloodFillNonRec(HDC hdc, int sx, int sy, COLORREF fill,
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 //  CLIPPING
-// ═══════════════════════════════════════════════════════════════════════════
 
-// ── Point inside rect ─────────────────────────────────────────────────────────
+//  Point inside rect 
 bool PointInRect(POINT p, RECT r)
 {
     return p.x>=r.left && p.x<=r.right && p.y>=r.top && p.y<=r.bottom;
 }
 
-// ── Cohen-Sutherland ──────────────────────────────────────────────────────────
+//  Cohen-Sutherland 
 enum CS_CODE { INSIDE=0,LEFT=1,RIGHT=2,BOTTOM=4,TOP=8 };
 static int CSCode(int x,int y,RECT r){
     int c=INSIDE;
@@ -413,8 +386,8 @@ bool CohenSutherland(int&x1,int&y1,int&x2,int&y2,RECT r)
 {
     int c1=CSCode(x1,y1,r),c2=CSCode(x2,y2,r);
     while(true){
-        if(!(c1|c2)) return true;           // both inside
-        if(c1&c2)    return false;          // trivially outside
+        if(!(c1|c2)) return true;
+        if(c1&c2)    return false;
         int c=c1?c1:c2;
         int x,y;
         if(c&BOTTOM){x=x1+(x2-x1)*(r.bottom-y1)/(y2-y1);y=r.bottom;}
@@ -426,7 +399,7 @@ bool CohenSutherland(int&x1,int&y1,int&x2,int&y2,RECT r)
     }
 }
 
-// ── Sutherland-Hodgman polygon clip ──────────────────────────────────────────
+//  Sutherland-Hodgman polygon clip 
 static vector<POINT> ClipEdge(vector<POINT>& in,POINT a,POINT b)
 {
     vector<POINT> out;
@@ -459,7 +432,7 @@ void SutherlandHodgman(vector<POINT> poly,RECT r,vector<POINT>&out)
     out=poly;
 }
 
-// ── Circle clipping (bonus) ────────────────────────────────────────────────────
+//  Circle clipping (bonus) 
 bool PointInCircle(POINT p, POINT center, int r)
 {
     int dx=p.x-center.x, dy=p.y-center.y;
@@ -485,21 +458,15 @@ bool ClipLineCircle(int&x1,int&y1,int&x2,int&y2,POINT c,int r)
     return true;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 //  SMILEY FACES
-// ═══════════════════════════════════════════════════════════════════════════
 void DrawHappyFace(HDC hdc,int cx,int cy,int r,COLORREF c)
 {
-    // face
     MidpointCircle(hdc,cx,cy,r,c);
-    // eyes
     int ey=cy-r/3, ex=r/3;
     MidpointCircle(hdc,cx-ex,ey,r/10,c);
     MidpointCircle(hdc,cx+ex,ey,r/10,c);
-    // nose: two short DDA lines
     DDALine(hdc,cx,cy-r/8,cx-r/12,cy+r/12,c);
     DDALine(hdc,cx,cy-r/8,cx+r/12,cy+r/12,c);
-    // mouth: smile arc via cardinal spline points
     vector<POINT> mouth={
         {cx-(int)(r*0.45f),cy+(int)(r*0.15f)},
         {cx-(int)(r*0.25f),cy+(int)(r*0.45f)},
@@ -518,7 +485,6 @@ void DrawSadFace(HDC hdc,int cx,int cy,int r,COLORREF c)
     MidpointCircle(hdc,cx+ex,ey,r/10,c);
     DDALine(hdc,cx,cy,cx-r/12,cy+r/8,c);
     DDALine(hdc,cx,cy,cx+r/12,cy+r/8,c);
-    // mouth: frown
     vector<POINT> mouth={
         {cx-(int)(r*0.45f),cy+(int)(r*0.50f)},
         {cx-(int)(r*0.25f),cy+(int)(r*0.25f)},
@@ -529,5 +495,4 @@ void DrawSadFace(HDC hdc,int cx,int cy,int r,COLORREF c)
     CardinalSpline(hdc,mouth,0.5f,c);
 }
 
-// ─── Draw a shape from a Shape record ─────────────────────────────────────────
 void RenderShape(HDC hdc, const Shape& s);
