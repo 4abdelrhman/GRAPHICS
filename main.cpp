@@ -599,7 +599,13 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
                             g_mode == MODE_FILL_CIRC_LINES    ||
                             g_mode == MODE_FILL_CIRC_CIRCS    ||
                             g_mode == MODE_FILL_SQ_HERMITE    ||
-                            g_mode == MODE_FILL_RECT_BEZIER);
+                            g_mode == MODE_FILL_RECT_BEZIER   ||
+                            g_mode == MODE_BONUS_HAPPY        ||
+                            g_mode == MODE_BONUS_SAD          ||
+                            g_mode == MODE_CLIP_RECT_POINT    ||
+                            g_mode == MODE_CLIP_RECT_LINE     ||
+                            g_mode == MODE_CLIP_SQ_POINT      ||
+                            g_mode == MODE_CLIP_SQ_LINE);
         if (isTwoClickMode) {
             if (!g_waitingSecondPt) {
                 g_firstPt         = {mx, my};

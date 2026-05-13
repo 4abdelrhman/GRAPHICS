@@ -465,8 +465,7 @@ void DrawHappyFace(HDC hdc,int cx,int cy,int r,COLORREF c)
     int ey=cy-r/3, ex=r/3;
     MidpointCircle(hdc,cx-ex,ey,r/10,c);
     MidpointCircle(hdc,cx+ex,ey,r/10,c);
-    DDALine(hdc,cx,cy-r/8,cx-r/12,cy+r/12,c);
-    DDALine(hdc,cx,cy-r/8,cx+r/12,cy+r/12,c);
+    DDALine(hdc,cx,cy-r/8,cx,cy+r/8,c);
     vector<POINT> mouth={
         {cx-(int)(r*0.45f),cy+(int)(r*0.15f)},
         {cx-(int)(r*0.25f),cy+(int)(r*0.45f)},
@@ -477,14 +476,14 @@ void DrawHappyFace(HDC hdc,int cx,int cy,int r,COLORREF c)
     CardinalSpline(hdc,mouth,0.5f,c);
 }
 
+// SAD FACE
 void DrawSadFace(HDC hdc,int cx,int cy,int r,COLORREF c)
 {
     MidpointCircle(hdc,cx,cy,r,c);
     int ey=cy-r/3, ex=r/3;
     MidpointCircle(hdc,cx-ex,ey,r/10,c);
     MidpointCircle(hdc,cx+ex,ey,r/10,c);
-    DDALine(hdc,cx,cy,cx-r/12,cy+r/8,c);
-    DDALine(hdc,cx,cy,cx+r/12,cy+r/8,c);
+    DDALine(hdc,cx,cy,cx,cy+r/8,c);
     vector<POINT> mouth={
         {cx-(int)(r*0.45f),cy+(int)(r*0.50f)},
         {cx-(int)(r*0.25f),cy+(int)(r*0.25f)},
