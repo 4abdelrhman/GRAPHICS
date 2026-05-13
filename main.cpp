@@ -605,7 +605,8 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
                             g_mode == MODE_CLIP_RECT_POINT    ||
                             g_mode == MODE_CLIP_RECT_LINE     ||
                             g_mode == MODE_CLIP_SQ_POINT      ||
-                            g_mode == MODE_CLIP_SQ_LINE);
+                            g_mode == MODE_CLIP_SQ_LINE       ||
+                            g_mode == MODE_BONUS_CIRC_LINE);
         if (isTwoClickMode) {
             if (!g_waitingSecondPt) {
                 g_firstPt         = {mx, my};
@@ -707,9 +708,10 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
         }
         else if(id==ID_FILE_EXIT) PostQuitMessage(0);
         else if(id==ID_PREF_BGCOLOR){
-            g_bgColor=RGB(255,255,255);
-            CLog("[PREF] Background set to White\n");
-            RedrawAll();
+            if(PickColor(hwnd,g_bgColor)){
+                CLog("[PREF] Background color changed\n");
+                RedrawAll();
+            }
         }
         else if(id==ID_PREF_CURSOR) CycleCursor();
         else if(id==ID_PREF_COLOR){
@@ -780,18 +782,18 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp)
 DWORD WINAPI ConsoleThread(LPVOID)
 {
     CLog("\n=================================================\n");
-    CLog("  2D Drawing Package – Console\n");
+    CLog("  2D Drawing Package - Console\n");
     CLog("=================================================\n");
     CLog("  Commands:\n");
-    CLog("  color  <R> <G> <B>   – set draw color\n");
-    CLog("  bg     <R> <G> <B>   – set background color\n");
-    CLog("  clip   <x1 y1 x2 y2> – set clip rectangle\n");
-    CLog("  clipr  <r>           – set clip circle radius\n");
-    CLog("  clipc  <x> <y>       – set clip circle center\n");
-    CLog("  sq     <half-side>   – set square clip side\n");
-    CLog("  clear                – clear canvas\n");
-    CLog("  count                – print shape count\n");
-    CLog("  quit                 – exit\n");
+    CLog("  color  <R> <G> <B>   - set draw color\n");
+    CLog("  bg     <R> <G> <B>   - set background color\n");
+    CLog("  clip   <x1 y1 x2 y2> - set clip rectangle\n");
+    CLog("  clipr  <r>           - set clip circle radius\n");
+    CLog("  clipc  <x> <y>       - set clip circle center\n");
+    CLog("  sq     <half-side>   - set square clip side\n");
+    CLog("  clear                - clear canvas\n");
+    CLog("  count                - print shape count\n");
+    CLog("  quit                 - exit\n");
     CLog("=================================================\n\n");
     char buf[256];
     while(true){
