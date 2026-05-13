@@ -328,7 +328,7 @@ void ScanlineFill(HDC hdc, vector<POINT> poly, COLORREF c)
 //  Non-convex (same scan-line, handles concavities too) 
 void NonConvexFill(HDC hdc,vector<POINT>& poly, COLORREF c)
 {
-    ScanlineFill(hdc, poly, c); // scan-line is inherently general
+    ScanlineFill(hdc, poly, c);
 }
 
 //  Recursive flood fill 
@@ -399,7 +399,7 @@ bool CohenSutherland(int&x1,int&y1,int&x2,int&y2,RECT r)
     }
 }
 
-//  Sutherland-Hodgman polygon clip 
+//  Sutherland-Hodgman polygon clip
 static vector<POINT> ClipEdge(vector<POINT>& in,POINT a,POINT b)
 {
     vector<POINT> out;
@@ -432,7 +432,7 @@ void SutherlandHodgman(vector<POINT> poly,RECT r,vector<POINT>&out)
     out=poly;
 }
 
-//  Circle clipping (bonus) 
+//  Circle clipping (bonus)
 bool PointInCircle(POINT p, POINT center, int r)
 {
     int dx=p.x-center.x, dy=p.y-center.y;
